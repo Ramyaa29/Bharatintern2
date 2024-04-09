@@ -1,36 +1,70 @@
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
+from tensorflow import keras
+
+df = pd.read_csv('Irisdataset.csv')
+df.head()
+
+df['Species'].value_counts()
+
+df.info()
+
+df.isnull().sum()
+
+from sklearn.preprocessing import LabelEncoder
+le = LabelEncoder()
+df['Species'] = le.fit_transform(df['Species'])
+df.head()
+
+species_name = le.classes_
+print(species_name)
+
+X = df.drop(columns=['Id', 'Species'])
+y = df['Species']
+X.head(3)
+
+print(y[:5])
+
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
+x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, random_state=69)
 
-# Load the dataset from CSV
-df = pd.read_csv('Housing.csv')
-print(df.head())
+x_train.shape
 
-print(df.isnull().sum())
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+print(x_train[:1])
+x_train = sc.fit_transform(x_train)
+x_test = sc.transform(x_test)
+print(x_train[:1])
 
-X = df[['area','bedrooms','bathrooms','stories','parking']]
-y= df['price']
+y_train = keras.utils.to_categorical(y_train, num_classes=3)
+print(y_train[:5])
 
-sns.pairplot(df)
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
 
-sns.heatmap(df.corr(), annot=True)
+model = Sequential()
+model.add(Dense(units=32, activation='relu', input_shape=(x_train.shape[-1], )))
+model.add(Dense(units=32, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(units=3, activation='softmax'))
 
-X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,random_state=42)
+model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
+model.summary()
 
-model=LinearRegression()
-model.fit(X_train,y_train)
+model.fit(x_train, y_train, epochs=100, verbose=2)
 
-y_pred=model.predict(X_test)
-mean_s_predict= mean_squared_error(y_test,y_pred)
-r2_scored=r2_score(y_test,y_pred)
-print("Mean Squared Eroor:",mean_s_predict)
-print("r2_score:",r2_scored)
+prediction = model.predict(x_test)
+print(prediction[:5])
 
-plt.scatter(y_test,y_pred)
-plt.xlabel("Actual Price")
-plt.ylabel("Predicted Price")
-plt.title("Actual Price vs Predicted Price")
-plt.show()
+prediction = np.argmax(prediction, axis=-1)
+print(prediction[:5])
+
+print(y_test[:5])
+
+from sklearn.metrics import accuracy_score, confusion_matrix
+print(accuracy_score(y_test, prediction))
+
+cm = confusion_matrix(y_test, prediction)
+print(cm)
